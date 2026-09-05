@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RailReserve | Real-Time Indian Railway Reservation System</title>
+  <meta name="description" content="Search authentic Indian Railways trains, check real-time seat availability & fares, add multiple passengers, and book railway tickets securely.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <header class="navbar">
+    <div class="nav-container">
+      <a href="#" class="brand" onclick="showSection('home')">
+        <div class="brand-icon">🚆</div>
+        <span>RailReserve</span>
+      </a>
+
+      <ul class="nav-links">
+        <li class="nav-item active" id="nav-home"><a onclick="showSection('home')">Search Trains</a></li>
+        <li class="nav-item" id="nav-pnr"><a onclick="showSection('pnr')">PNR Status</a></li>
+        <li class="nav-item" id="nav-bookings"><a onclick="showSection('bookings')">My Bookings</a></li>
+        <li class="nav-item" id="nav-profile" style="display: none;"><a onclick="showSection('profile')">My Profile</a></li>
+      </ul>
+
+      <div class="auth-actions" id="auth-section">
+        <button class="btn btn-outline btn-sm" onclick="openLoginModal()">Sign In</button>
+        <button class="btn btn-primary btn-sm" onclick="openRegisterModal()">Register</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section & Search Banner -->
+  <section class="hero" id="hero-banner">
+    <div class="hero-inner">
+      <h1 class="hero-title">Indian Railway Ticket Reservation System</h1>
+      <p class="hero-subtitle">Authentic Train Catalogue, Real-Time Seat Availability, Multi-Passenger Booking & Secure Payments</p>
+
+      <div class="search-card">
+        <form class="search-form" id="train-search-form" onsubmit="handleSearchTrains(event)">
+          <div class="form-group autocomplete-container">
+            <label for="search-from">From Station / City</label>
+            <input type="text" id="search-from" class="form-control" placeholder="Search station or code (e.g. SBC or Bengaluru)" autocomplete="off" required>
+            <input type="hidden" id="search-from-code">
+            <div class="autocomplete-dropdown" id="from-autocomplete-dropdown"></div>
+          </div>
+
+          <div class="swap-btn-container">
+            <button type="button" class="btn-swap" title="Swap Stations" onclick="swapStations()">⇄</button>
+          </div>
+
+          <div class="form-group autocomplete-container">
+            <label for="search-to">To Station / City</label>
+            <input type="text" id="search-to" class="form-control" placeholder="Search station or code (e.g. MAS or Chennai)" autocomplete="off" required>
+            <input type="hidden" id="search-to-code">
+            <div class="autocomplete-dropdown" id="to-autocomplete-dropdown"></div>
+          </div>
+
+          <div class="form-group">
+            <label for="search-date">Journey Date</label>
+            <input type="date" id="search-date" class="form-control" required>
+          </div>
+
+          <div class="form-group">
+            <label for="search-quota">Quota</label>
+            <select id="search-quota" class="form-control">
+              <option value="GN">General (GN)</option>
+              <option value="TQ">Tatkal (TQ)</option>
+              <option value="LD">Ladies (LD)</option>
+              <option value="SS">Senior Citizen (SS)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <button type="submit" class="btn btn-accent btn-lg" id="search-submit-btn">
+              🔍 Search Trains
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Content Container -->
+  <main class="container">
+
+    <!-- Features Banner -->
+    <div class="features-grid" id="features-section">
+      <div class="feature-card">
+        <div class="feature-icon">🚆</div>
+        <div>
+          <h3>Authentic Train Timetable</h3>
+          <p>Real trains including Vande Bharat, Rajdhani, Shatabdi, Duronto & Superfast express.</p>
+        </div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📊</div>
+        <div>
+          <h3>Real-Time Seat Availability</h3>
+          <p>Class-wise seat availability and itemized fare breakdowns before booking.</p>
+        </div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">👥</div>
+        <div>
+          <h3>Multi-Passenger Support</h3>
+          <p>Add multiple passengers with berth preferences, age, gender, and meal choices.</p>
+        </div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">💳</div>
+        <div>
+          <h3>Secure Payment Gateway</h3>
+          <p>Instant booking confirmation with Razorpay integration and instant refunds.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- HOME / TRAIN SEARCH RESULTS SECTION -->
+    <section id="section-home">
+      <div class="section-header">
+        <h2 class="section-title">
+          <span>Available Trains</span>
+          <span id="search-context-label" style="font-size: 0.95rem; font-weight: 500; color: var(--text-muted);"></span>
+        </h2>
+        <div id="results-count" style="font-size: 0.9rem; color: var(--text-muted);"></div>
+      </div>
+
+      <div class="train-list" id="trains-container">
+        <!-- Train Cards rendered via JS -->
+      </div>
+    </section>
+
+    <!-- PNR STATUS SECTION -->
+    <section id="section-pnr" style="display: none;">
+      <div class="section-header">
+        <h2 class="section-title">🔍 Check PNR Status & Cancellation</h2>
+      </div>
+
+      <div class="search-card" style="margin-bottom: 2rem;">
+        <form style="display: flex; gap: 1rem; align-items: flex-end;" onsubmit="handlePnrLookup(event)">
+          <div class="form-group" style="flex: 1;">
+            <label for="pnr-input">Enter 10-Digit Official Indian Railways PNR or Application Booking Reference</label>
+            <input type="text" id="pnr-input" class="form-control" placeholder="e.g. 8249102837 or PNR3WJ4KHX" required maxlength="20" style="text-transform: uppercase;">
+          </div>
+          <button type="submit" class="btn btn-primary" style="height: 42px;">Search PNR</button>
+        </form>
+      </div>
+
+      <div id="pnr-result-container"></div>
+    </section>
+
+    <!-- MY BOOKINGS SECTION -->
+    <section id="section-bookings" style="display: none;">
+      <div class="section-header">
+        <h2 class="section-title">📋 My Bookings & Tickets</h2>
+        <div style="display: flex; gap: 0.5rem;">
+          <button class="btn btn-outline btn-sm" onclick="loadUserBookings('ALL')">All</button>
+          <button class="btn btn-outline btn-sm" onclick="loadUserBookings('CONFIRMED')">Confirmed</button>
+          <button class="btn btn-outline btn-sm" onclick="loadUserBookings('CANCELLED')">Cancelled</button>
+        </div>
+      </div>
+
+      <div id="bookings-container">
+        <!-- Rendered via JS -->
+      </div>
+    </section>
+
+    <!-- USER PROFILE SECTION -->
+    <section id="section-profile" style="display: none;">
+      <div class="section-header">
+        <h2 class="section-title">👤 User Profile</h2>
+      </div>
+
+      <div class="search-card" style="max-width: 600px;">
+        <form id="profile-form" onsubmit="handleProfileUpdate(event)">
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label for="profile-name">Full Name</label>
+            <input type="text" id="profile-name" class="form-control" required>
+          </div>
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label for="profile-email">Email Address (Read-only)</label>
+            <input type="email" id="profile-email" class="form-control" readonly style="background: #f1f5f9;">
+          </div>
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label for="profile-phone">Phone Number</label>
+            <input type="tel" id="profile-phone" class="form-control" pattern="[0-9]{10}" required>
+          </div>
+          <div class="form-group" style="margin-bottom: 1.5rem;">
+            <label>Account Role</label>
+            <input type="text" id="profile-role" class="form-control" readonly style="background: #f1f5f9;">
+          </div>
+          <button type="submit" class="btn btn-primary">Save Profile Changes</button>
+        </form>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- TRAIN DETAILS & ROUTE STOPS MODAL -->
+  <div class="modal-overlay" id="trainDetailsModal">
+    <div class="modal-box" style="max-width: 760px;">
+      <div class="modal-header">
+        <div>
+          <h3 id="train-details-title" style="margin: 0; color: #1e3a8a;">Train Route & Schedule</h3>
+          <div id="train-details-subtitle" style="font-size: 0.85rem; color: #64748b; margin-top: 2px;"></div>
+        </div>
+        <button class="modal-close" onclick="closeModal('trainDetailsModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- Quick stats bar -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.75rem; background: #f8fafc; border: 1px solid var(--border-color); padding: 0.85rem; border-radius: 8px; margin-bottom: 1.25rem;">
+          <div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Train Type</div>
+            <div id="td-type" style="font-weight: 700; color: var(--text-main);">Express</div>
+          </div>
+          <div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Running Days</div>
+            <div id="td-running-days" style="font-weight: 700; color: var(--primary);">Daily</div>
+          </div>
+          <div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Total Distance</div>
+            <div id="td-distance" style="font-weight: 700; color: var(--text-main);">-- km</div>
+          </div>
+          <div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Classes</div>
+            <div id="td-classes" style="font-weight: 600; font-size: 0.8rem; color: #334155;">--</div>
+          </div>
+        </div>
+
+        <h4 style="margin-bottom: 0.5rem; font-size: 0.95rem; color: #1e293b;">Station Stops & Timetable:</h4>
+        <div style="max-height: 280px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px;">
+          <table class="schedule-table" style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+            <thead>
+              <tr style="background: #f1f5f9; text-align: left; position: sticky; top: 0;">
+                <th style="padding: 8px 12px; border-bottom: 1px solid #cbd5e1;">#</th>
+                <th style="padding: 8px 12px; border-bottom: 1px solid #cbd5e1;">Station (Code)</th>
+                <th style="padding: 8px 12px; border-bottom: 1px solid #cbd5e1;">City / State</th>
+                <th style="padding: 8px 12px; border-bottom: 1px solid #cbd5e1;">Arr</th>
+                <th style="padding: 8px 12px; border-bottom: 1px solid #cbd5e1;">Dep</th>
+                <th style="padding: 8px 12px; border-bottom: 1px solid #cbd5e1;">Distance</th>
+              </tr>
+            </thead>
+            <tbody id="train-schedule-tbody">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="closeModal('trainDetailsModal')">Close</button>
+        <button type="button" class="btn btn-primary" id="td-book-btn">Book Reservation</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MULTI-PASSENGER BOOKING MODAL -->
+  <div class="modal-overlay" id="bookingModal">
+    <div class="modal-box" style="max-width: 680px;">
+      <div class="modal-header">
+        <h3 id="booking-modal-title">Book Railway Reservation</h3>
+        <button class="modal-close" onclick="closeModal('bookingModal')">&times;</button>
+      </div>
+      <form id="booking-form" onsubmit="handleBookingSubmit(event)">
+        <div class="modal-body">
+          <input type="hidden" id="book-train-id">
+
+          <!-- Train summary header -->
+          <div style="background: #eff6ff; padding: 1rem; border-radius: 8px; margin-bottom: 1.25rem; border: 1px solid #bfdbfe;">
+            <div style="font-weight: 700; font-size: 1.1rem; color: #1e3a8a;" id="book-train-name">Karnataka Express (12627)</div>
+            <div style="font-size: 0.875rem; color: #4b5563;" id="book-train-route">Bangalore → Delhi | Dep: 07:20 PM</div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+            <div class="form-group">
+              <label for="book-date">Journey Date *</label>
+              <input type="date" id="book-date" class="form-control" required onchange="onBookingDateOrClassChange()">
+            </div>
+
+            <div class="form-group">
+              <label for="book-class">Travel Class *</label>
+              <select id="book-class" class="form-control" onchange="onBookingDateOrClassChange()" required>
+                <!-- Populated dynamically -->
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="book-quota">Quota *</label>
+              <select id="book-quota" class="form-control">
+                <option value="GN">General (GN)</option>
+                <option value="TQ">Tatkal (TQ)</option>
+                <option value="LD">Ladies (LD)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Availability indicator -->
+          <div id="booking-availability-badge" style="margin-bottom: 1rem;"></div>
+
+          <!-- Passengers Container -->
+          <div style="margin-bottom: 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+              <label style="font-weight: 700; margin: 0;">Passenger Details</label>
+              <button type="button" class="btn btn-outline btn-sm" onclick="addPassengerRow()">+ Add Passenger</button>
+            </div>
+            <div id="passengers-list-container">
+              <!-- Dynamically rendered passenger rows -->
+            </div>
+          </div>
+
+          <!-- Price breakdown summary -->
+          <div style="background: #f8fafc; border: 1px solid var(--border-color); padding: 0.85rem 1rem; border-radius: 8px; margin-bottom: 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <div style="font-weight: 600; color: var(--text-muted);" id="fare-source-label">Fare Estimate:</div>
+                <div style="font-size: 0.8rem; color: #64748b;" id="fare-calc-detail">1 Passenger × ₹950</div>
+              </div>
+              <span style="font-size: 1.45rem; font-weight: 800; color: var(--primary-dark);" id="book-total-fare">₹950</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeModal('bookingModal')">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="book-submit-btn">Proceed to Payment & Book</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- PAYMENT CHECKOUT MODAL -->
+  <div class="modal-overlay" id="paymentModal">
+    <div class="modal-box" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3>💳 Secure Payment Checkout</h3>
+        <button class="modal-close" onclick="closeModal('paymentModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="text-align: center; margin-bottom: 1.5rem;">
+          <div style="font-size: 0.9rem; color: var(--text-muted);">Payable Amount</div>
+          <div style="font-size: 2rem; font-weight: 800; color: #1e3a8a;" id="pay-modal-amount">₹950</div>
+          <div style="font-size: 0.8rem; color: #64748b;" id="pay-modal-receipt">Order #REC_12345</div>
+        </div>
+
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 1rem; border-radius: 8px; margin-bottom: 1.25rem;">
+          <div style="font-weight: 600; color: #166534;">Payment Gateway: <span id="pay-modal-gateway">Razorpay</span></div>
+          <div style="font-size: 0.825rem; color: #15803d; margin-top: 2px;">Protected with 256-bit SSL encryption.</div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label>Select Payment Method</label>
+          <select class="form-control" id="pay-method-select">
+            <option value="UPI">UPI / QR (Google Pay, PhonePe, Paytm)</option>
+            <option value="CARD">Credit / Debit Card</option>
+            <option value="NETBANKING">Net Banking</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="closeModal('paymentModal')">Cancel</button>
+        <button type="button" class="btn btn-primary" id="pay-confirm-btn" onclick="executePaymentVerification()">Authorize & Pay Now</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- E-TICKET VIEW MODAL -->
+  <div class="modal-overlay" id="ticketModal">
+    <div class="modal-box" style="max-width: 680px;">
+      <div class="modal-header">
+        <h3 id="ticket-modal-title">Railway Reservation Ticket</h3>
+        <button class="modal-close" onclick="closeModal('ticketModal')">&times;</button>
+      </div>
+
+      <div class="modal-body" id="ticket-print-area">
+        <div class="disclaimer-banner" id="ticket-disclaimer-banner">
+          <span>ℹ️</span>
+          <span id="ticket-disclaimer-text"><strong>Notice:</strong> Application-generated reservation slip.</span>
+        </div>
+
+        <div class="ticket-wrapper">
+          <div class="ticket-header">
+            <div>
+              <div class="ticket-brand" id="ticket-booking-type-brand">🚆 APPLICATION RESERVATION</div>
+              <div style="font-size: 0.8rem; color: var(--text-muted);">Electronic Reservation Slip</div>
+            </div>
+            <div style="text-align: right;">
+              <div class="ticket-pnr-tag" id="ticket-pnr">PNRQ2XDWN5</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;" id="ticket-official-pnr-tag"></div>
+            </div>
+          </div>
+
+          <div class="ticket-grid">
+            <div class="ticket-field">
+              <span class="label">Train Name & No.</span>
+              <span class="value" id="ticket-train">Karnataka Express (12627)</span>
+            </div>
+            <div class="ticket-field">
+              <span class="label">Journey Date</span>
+              <span class="value" id="ticket-date">10-09-2026</span>
+            </div>
+            <div class="ticket-field">
+              <span class="label">From Station</span>
+              <span class="value" id="ticket-from">Bangalore</span>
+            </div>
+            <div class="ticket-field">
+              <span class="label">To Station</span>
+              <span class="value" id="ticket-to">Delhi</span>
+            </div>
+            <div class="ticket-field">
+              <span class="label">Departure</span>
+              <span class="value" id="ticket-dept">07:20 PM</span>
+            </div>
+            <div class="ticket-field">
+              <span class="label">Arrival</span>
+              <span class="value" id="ticket-arr">09:00 AM</span>
+            </div>
+
+            <!-- Seat Highlight Box -->
+            <div class="ticket-seat-highlight" style="grid-column: 1 / -1;">
+              <div style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: #065f46; font-weight: 600;">Allocated Seats & Class</div>
+              <div class="seat-code" id="ticket-seat">A1-01</div>
+              <div style="font-size: 0.85rem; font-weight: 600;" id="ticket-class">AC 2 Tier (2A)</div>
+            </div>
+
+            <!-- Passengers List -->
+            <div style="grid-column: 1 / -1; margin-top: 0.5rem;">
+              <span class="label">Passenger List</span>
+              <div id="ticket-passengers-table" style="margin-top: 0.25rem;"></div>
+            </div>
+
+            <div class="ticket-field">
+              <span class="label">Total Paid Fare</span>
+              <span class="value" style="color: var(--primary); font-size: 1.1rem;" id="ticket-fare">₹1900</span>
+            </div>
+            <div class="ticket-field">
+              <span class="label">Booking Status</span>
+              <span class="value" id="ticket-status"><span class="badge badge-confirmed">CONFIRMED</span></span>
+            </div>
+          </div>
+
+          <div style="border-top: 1px dashed #cbd5e1; padding-top: 0.75rem; font-size: 0.75rem; color: #64748b; display: flex; justify-content: space-between;">
+            <span>Booking Time: <span id="ticket-booked-at">2026-09-04 20:00:00</span></span>
+            <span id="ticket-footer-source">RailReserve Transaction</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="closeModal('ticketModal')">Close</button>
+        <button type="button" class="btn btn-primary" onclick="window.print()">🖨️ Print Ticket</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- AUTH: LOGIN MODAL -->
+  <div class="modal-overlay" id="loginModal">
+    <div class="modal-box" style="max-width: 440px;">
+      <div class="modal-header">
+        <h3>Sign In to RailReserve</h3>
+        <button class="modal-close" onclick="closeModal('loginModal')">&times;</button>
+      </div>
+      <form id="login-form" onsubmit="handleLoginSubmit(event)">
+        <div class="modal-body">
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label for="login-email">Email Address *</label>
+            <input type="email" id="login-email" class="form-control" placeholder="user@example.com" required>
+          </div>
+          <div class="form-group" style="margin-bottom: 1.25rem;">
+            <label for="login-password">Password *</label>
+            <input type="password" id="login-password" class="form-control" placeholder="••••••••" required>
+          </div>
+
+          <div style="background: #f8fafc; padding: 0.75rem; border-radius: 6px; border: 1px solid var(--border-color); margin-bottom: 0.75rem; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center;">
+            <span>Demo: <code>tarun@example.com</code></span>
+            <button type="button" class="btn btn-outline btn-sm" onclick="fillDemoCredentials()">Use Demo</button>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeModal('loginModal')">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="login-submit-btn">Sign In</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- AUTH: REGISTER MODAL -->
+  <div class="modal-overlay" id="registerModal">
+    <div class="modal-box" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3>Create an Account</h3>
+        <button class="modal-close" onclick="closeModal('registerModal')">&times;</button>
+      </div>
+      <form id="register-form" onsubmit="handleRegisterSubmit(event)">
+        <div class="modal-body">
+          <div class="form-group" style="margin-bottom: 0.85rem;">
+            <label for="reg-name">Full Name *</label>
+            <input type="text" id="reg-name" class="form-control" placeholder="John Doe" required minlength="2">
+          </div>
+          <div class="form-group" style="margin-bottom: 0.85rem;">
+            <label for="reg-email">Email Address *</label>
+            <input type="email" id="reg-email" class="form-control" placeholder="john@example.com" required>
+          </div>
+          <div class="form-group" style="margin-bottom: 0.85rem;">
+            <label for="reg-phone">Phone Number *</label>
+            <input type="tel" id="reg-phone" class="form-control" placeholder="10-digit number" pattern="[0-9]{10}" required>
+          </div>
+          <div class="form-group" style="margin-bottom: 0.85rem;">
+            <label for="reg-password">Password *</label>
+            <input type="password" id="reg-password" class="form-control" placeholder="At least 6 characters" minlength="6" required>
+          </div>
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label for="reg-confirm-password">Confirm Password *</label>
+            <input type="password" id="reg-confirm-password" class="form-control" placeholder="Confirm your password" minlength="6" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeModal('registerModal')">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="reg-submit-btn">Create Account</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- CANCELLATION CONFIRMATION MODAL -->
+  <div class="modal-overlay" id="cancelConfirmModal">
+    <div class="modal-box" style="max-width: 460px;">
+      <div class="modal-header">
+        <h3 style="color: var(--danger);">Confirm Reservation Cancellation</h3>
+        <button class="modal-close" onclick="closeModal('cancelConfirmModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="margin-bottom: 1rem;">Are you sure you want to cancel this reservation? This action will immediately release your allocated seats and initiate a refund.</p>
+        <div style="background: #fef2f2; border: 1px solid #fecaca; padding: 1rem; border-radius: 8px;">
+          <div><strong>Booking Reference (PNR):</strong> <span id="cancel-modal-pnr"></span></div>
+          <div><strong>Passenger:</strong> <span id="cancel-modal-passenger"></span></div>
+          <div><strong>Seat(s):</strong> <span id="cancel-modal-seat"></span></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="closeModal('cancelConfirmModal')">Keep Ticket</button>
+        <button type="button" class="btn btn-danger" id="cancel-modal-confirm-btn" onclick="executeCancelReservation()">Yes, Cancel & Refund</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container"></div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <p>© 2026 RailReserve - Real-Time Indian Railway Reservation System. Built with Spring Boot & JPA.</p>
+    <p style="font-size: 0.75rem; color: #64748b; margin-top: 4px;">Search, Availability, Fares, Passenger Booking, Payment Gateway, and PNR Management.</p>
+  </footer>
+
+  <script src="js/app.js"></script>
+</body>
+</html>

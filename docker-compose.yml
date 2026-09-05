@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  # MySQL 8.0 Production Database
+  mysql-db:
+    image: mysql:8.0
+    container_name: railway_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: railway_reservation
+      MYSQL_USER: railway_user
+      MYSQL_PASSWORD: railway_password
+      MYSQL_ROOT_PASSWORD: root_secure_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "railway_user", "-prailway_password"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - railway-network
+
+  # Railway Reservation System Application
+  railway-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: railway_reservation_app
+    restart: unless-stopped
+    depends_on:
+      mysql-db:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      # Database Configuration
+      DB_URL: jdbc:mysql://mysql-db:3306/railway_reservation?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Kolkata
+      DB_DRIVER: com.mysql.cj.jdbc.Driver
+      DB_USERNAME: railway_user
+      DB_PASSWORD: railway_password
+
+      # Railway Provider Configuration (Optional live external provider credentials)
+      RAILWAY_API_BASE_URL: ${RAILWAY_API_BASE_URL:-}
+      RAILWAY_API_KEY: ${RAILWAY_API_KEY:-}
+
+      # Payment Gateway Configuration
+      PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-mock}
+      PAYMENT_API_KEY: ${PAYMENT_API_KEY:-}
+      PAYMENT_API_SECRET: ${PAYMENT_API_SECRET:-}
+
+      # SMS Gateway Configuration
+      SMS_PROVIDER: ${SMS_PROVIDER:-mock}
+      SMS_API_KEY: ${SMS_API_KEY:-}
+      SMS_API_SECRET: ${SMS_API_SECRET:-}
+      SMS_SENDER_ID: ${SMS_SENDER_ID:-RAILRES}
+
+      # JVM Options
+      JAVA_OPTS: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    networks:
+      - railway-network
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  railway-network:
+    driver: bridge

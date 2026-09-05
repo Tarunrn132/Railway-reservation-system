@@ -1,0 +1,65 @@
+# ===================================================================
+# Render Infrastructure as Code Blueprint (render.yaml)
+# Railway Reservation System - Web Service + Managed PostgreSQL
+# ===================================================================
+
+services:
+  # -----------------------------------------------------------------
+  # 1. Spring Boot Web Application (Docker Runtime)
+  # -----------------------------------------------------------------
+  - type: web
+    name: railway-reservation-system
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: oregon
+    healthCheckPath: /actuator/health
+    autoDeploy: true
+    envVars:
+      # Spring Profile
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+
+      # Connect to Render Managed PostgreSQL
+      - key: DATABASE_URL
+        fromDatabase:
+          name: railway-reservation-db
+          property: connectionString
+
+      # Application Secrets & Security (Auto-generated cryptographic key)
+      - key: JWT_SECRET
+        generateValue: true
+
+      - key: CORS_ALLOWED_ORIGINS
+        value: "*"
+
+      # Payment Gateway Configuration (Defaults to sandbox mock; swap to Razorpay via Render Dashboard)
+      - key: PAYMENT_PROVIDER
+        value: mock
+
+      - key: RAZORPAY_KEY_ID
+        sync: false
+
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+
+      # Railway Provider Configuration (Optional live provider credentials)
+      - key: RAILWAY_API_PROVIDER
+        value: mock
+
+      - key: RAILWAY_API_KEY
+        sync: false
+
+      - key: RAILWAY_API_BASE_URL
+        value: https://irctc1.p.rapidapi.com/api/v1
+
+databases:
+  # -----------------------------------------------------------------
+  # 2. Managed PostgreSQL Production Database
+  # -----------------------------------------------------------------
+  - name: railway-reservation-db
+    databaseName: railway_reservation
+    user: railway_user
+    plan: free
+    region: oregon
+    ipAllowList: [] # Only internal Render network access for top security
